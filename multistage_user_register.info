@@ -1,0 +1,4 @@
+name = Create a multistage user registration form
+description = My first drupal multistage registration form
+package = custom module
+core = 7.x
