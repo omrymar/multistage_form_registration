@@ -11,7 +11,7 @@ function multistage_user_register_menu() {
     'title' => 'Subscriptions',
     'page callback' => 'multistage_user_register_form',
     'access callback' => TRUE,
-    'access arguments' => 'anonymous_user',
+    //'access arguments' => 'anonymous_user',
     'type' => MENU_LOCAL_TASK,
     'file' => 'user.pages.inc',
     'file path' => drupal_get_path('module', 'user'),
@@ -45,7 +45,6 @@ function multistage_user_register_form() {
 
 function multistage_user_register_form_user_register_form_alter(&$form, &$form_state, $form_id) {
 
-
   $form['field_user_get_news']['#access'] = TRUE;
 
   if (empty($form_state['step']))
@@ -53,42 +52,51 @@ function multistage_user_register_form_user_register_form_alter(&$form, &$form_s
     $form_state['step'] = 1;
   }
 
-  $step = $form_state['step'];
-
-  drupal_set_message(t('Create Account: Step @step', array('@step' => $step)));
-
-  $custom_fields = array('field_user_get_news','field_user_news_categories');
-
-  $required_fields = array('form_id', 'form_token', 'id');
-
-  //$news_act = (isset($_REQUEST['field_user_get_news[und]'])) ? 1 : 0;
-
-  if (in_array('custom', $form_state['build_info']['args']))
+  if ((empty($form_state['step']) && $form_state['step'] == 2) || (isset($form_state['build_info']['args'][2]) &&
+      $form_state['build_info']['args'][2] = 'custom'))
   {
 
+    drupal_set_title(t('Create Account: Step 2 of 2'));
+
     $form['field_user_get_news']['#access'] = FALSE;
-    $form['picture']['#access'] = FALSE;
-    $form['account']['#access'] = FALSE;
+    $form['account']['name']['#access'] = FALSE;
+    $form['account']['mail']['#access'] = FALSE;
 
     $form['field_user_news_categories']['#access'] = TRUE;
-//
-    $form['account']['name']['#default_value'] = !empty($_SESSION['account']['name']) ? ($_SESSION['account']['name']) : '';
 
-    $form['account']['mail']['#default_value'] = !empty($_SESSION['account']['mail']) ? ($_SESSION['account']['mail']) : '';
+    $form['account']['name']['#default_value'] = $_SESSION['account']['name'];
+
+    $form['account']['mail']['#default_value'] = $_SESSION['account']['mail'];
 
     $form['actions']['prev_page'] = array(
       '#type' => 'submit',
+      '#title' => 'Back to the previous page',
       '#value' => 'Back',
       '#submit' => array(
         'multistage_user_register_previous_page'
       ),
+    );
 
+    $form['actions']['cancel_page'] = array(
+      '#type' => 'submit',
+      '#value' => 'Cancel',
+      '#submit' => array(
+        'multistage_user_register_cancel_page'
+      ),
+      '#limit_validation_errors' => array(),
+      '#weight' => 6,
     );
 
   }
   else
   {
+    drupal_set_title(t('Create Account: Step 1 of 2'));
+
     $form['field_user_news_categories']['#access'] = FALSE;
+
+    $form['account']['name']['#default_value'] = !empty($form_state['values']['name']) ? $form_state['values']['name'] : '';
+
+    $form['account']['mail']['#default_value'] = !empty($form_state['values']['mail']) ? $form_state['values']['mail'] : '';
 
     $form['actions']['next_page'] = array(
       '#type' => 'submit',
@@ -96,34 +104,34 @@ function multistage_user_register_form_user_register_form_alter(&$form, &$form_s
       '#submit' => array(
         'multistage_user_register_next_page'
       ),
+      '#states' => array(
+        'visible' => array(
+          ':input[name="field_user_get_news"]' => array('checked' => TRUE),
+        ),
+      ),
+      '#weight' => 0,
     );
 
-    if (!empty($_SESSION))
-    {
+    $form['field_user_get_news'] = array(
+      '#type' => 'checkbox',
+      '#title' => '<br>'.t('If checkbox is checked - you want to subscribe for news in some category.
+       Please, push a button "Next" to watch categories list of news.'),
+    );
 
-      $form['account']['name']['#default_value'] = !empty($_SESSION['account']['name']) ? ($_SESSION['account']['name']) : '';
-
-      $form['account']['mail']['#default_value'] = !empty($_SESSION['account']['mail']) ? ($_SESSION['account']['mail']) : '';
-
-    }
   }
 }
 
 function multistage_user_register_next_page($form, &$form_state) {
 
-  $form['field_user_news_categories']['#access'] = TRUE;
+  //$form['account']['name'] = $form_state['values']['name'];
 
-  //save a user name and email
+  //$form['account']['mail'] = $form_state['values']['mail'];
 
-  $_SESSION['account']['name'] = $form_state['values']['name'];
-
-  $_SESSION['account']['mail'] = $form_state['values']['mail'];
+  $val = $form_state['values'];
+  $_SESSION['account']['name'] = $val['name'];
+  $_SESSION['account']['mail'] = $val['mail'];
 
   $form_state['step'] = 2;
-
-  $step = $form_state['step'];
-
-  drupal_set_message(t('Create Account: Step @step', array('@step' => $step)));
 
   $form_state['redirect'] = 'user/register/news_subscriptions';
 
@@ -133,4 +141,9 @@ function multistage_user_register_previous_page($form, &$form_state) {
 
   $form_state['redirect'] = 'user/register';
 
+
+}
+
+function multistage_user_register_cancel_page() {
+  drupal_goto('user/register');
 }
